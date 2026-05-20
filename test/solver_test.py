@@ -40,9 +40,7 @@ class Solver64Test(parameterized.TestCase):
         super().tearDown()
         torch.set_default_dtype(torch.float32)
 
-    @parameterized.parameters(
-        enumerate(("ant.xml", "frictionloss_dof.xml"))
-    )
+    @parameterized.parameters(enumerate(("ant.xml", "frictionloss_dof.xml")))
     def test_cg(self, seed, fname):
         """Test mujoco_torch cg solver matches mujoco cg solver at 64 bit precision."""
         f = epath.resource_path("mujoco_torch") / "test_data" / fname
