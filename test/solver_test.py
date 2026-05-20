@@ -40,7 +40,9 @@ class Solver64Test(parameterized.TestCase):
         super().tearDown()
         torch.set_default_dtype(torch.float32)
 
-    @parameterized.parameters(enumerate(("ant.xml",)))
+    @parameterized.parameters(
+        enumerate(("ant.xml", "frictionloss_dof.xml"))
+    )
     def test_cg(self, seed, fname):
         """Test mujoco_torch cg solver matches mujoco cg solver at 64 bit precision."""
         f = epath.resource_path("mujoco_torch") / "test_data" / fname
@@ -72,7 +74,7 @@ class Solver64Test(parameterized.TestCase):
 
 
 class SolverTest(parameterized.TestCase):
-    @parameterized.parameters(enumerate(("ant.xml",)))
+    @parameterized.parameters(enumerate(("ant.xml", "frictionloss_dof.xml")))
     def test_cg(self, seed, fname):
         """Test mujoco_torch cg solver is close to mj at 32 bit precision.
 
@@ -118,9 +120,10 @@ class SolverTest(parameterized.TestCase):
 
             self.assertLessEqual(
                 cost_mjx,
-                cost_mj * 1.01,
+                max(cost_mj * 1.01, 1e-18),
                 msg=f"mismatch: {fname} at step {i}, cost too high",
             )
+            self.assertLessEqual(dx.solver_niter[0], d.solver_niter[0])
             _assert_attr_eq(d, dx, "qfrc_constraint", i, fname, atol=1e-1, rtol=1e-1)
             _assert_attr_eq(d, dx, "qacc", i, fname, atol=1e-1, rtol=1e-1)
 
