@@ -332,16 +332,15 @@ def solve(m: Model, d: Data, fixed_iterations: bool = False) -> Data:
             linear_pos = (ctx.Jaref >= r * efc_frictionloss) & has_floss
             active = active & ~linear_neg & ~linear_pos
             floss_force = torch.where(
-                linear_neg, efc_frictionloss,
-                torch.where(linear_pos, -efc_frictionloss,
-                            torch.zeros_like(efc_frictionloss)),
+                linear_neg,
+                efc_frictionloss,
+                torch.where(linear_pos, -efc_frictionloss, torch.zeros_like(efc_frictionloss)),
             )
             floss_cost = (
-                (linear_neg * (-0.5 * r * efc_frictionloss * efc_frictionloss
-                               - efc_frictionloss * ctx.Jaref)).sum()
-                + (linear_pos * (-0.5 * r * efc_frictionloss * efc_frictionloss
-                                 + efc_frictionloss * ctx.Jaref)).sum()
-            )
+                linear_neg * (-0.5 * r * efc_frictionloss * efc_frictionloss - efc_frictionloss * ctx.Jaref)
+            ).sum() + (
+                linear_pos * (-0.5 * r * efc_frictionloss * efc_frictionloss + efc_frictionloss * ctx.Jaref)
+            ).sum()
 
         efc_force = efc_D * -ctx.Jaref * active + floss_force
         qfrc_con = efc_J_T @ efc_force
@@ -407,10 +406,9 @@ def solve(m: Model, d: Data, fixed_iterations: bool = False) -> Data:
                 rf = r * efc_frictionloss
                 fl_ln = (x <= -rf) & has_floss
                 fl_lp = (x >= rf) & has_floss
-                qf0 = (
-                    (fl_ln * efc_frictionloss * (-0.5 * rf - ctx.Jaref)).sum()
-                    + (fl_lp * efc_frictionloss * (-0.5 * rf + ctx.Jaref)).sum()
-                )
+                qf0 = (fl_ln * efc_frictionloss * (-0.5 * rf - ctx.Jaref)).sum() + (
+                    fl_lp * efc_frictionloss * (-0.5 * rf + ctx.Jaref)
+                ).sum()
                 qf1 = (fl_ln * (-efc_frictionloss * jv)).sum() + (fl_lp * (efc_frictionloss * jv)).sum()
                 floss_adjust = torch.stack([qf0, qf1, torch.tensor(0.0, dtype=quad.dtype, device=quad.device)])
                 active = active & ~fl_ln & ~fl_lp

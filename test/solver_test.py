@@ -21,6 +21,7 @@ from absl.testing import absltest, parameterized
 from etils import epath
 
 import mujoco_torch
+from mujoco_torch._src import solver as solver_lib
 
 
 def _assert_attr_eq(a, b, attr, step, fname, atol=1e-2, rtol=1e-2):
@@ -72,6 +73,39 @@ class Solver64Test(parameterized.TestCase):
 
 
 class SolverTest(parameterized.TestCase):
+    def test_frictionloss_slipping_saturates(self):
+        """Test frictionloss constraints saturate in the slipping regime."""
+        f = epath.resource_path("mujoco_torch") / "test_data" / "frictionloss_dof.xml"
+        m = mujoco.MjModel.from_xml_string(f.read_text())
+        mx = mujoco_torch.device_put(m)
+
+        dtype = torch.float64
+        base_updates = {
+            "efc_J": torch.tensor([[1.0]], dtype=dtype),
+            "efc_D": torch.tensor([1.0], dtype=dtype),
+            "efc_aref": torch.tensor([0.0], dtype=dtype),
+            "efc_frictionloss": torch.tensor([2.0], dtype=dtype),
+            "qM": torch.tensor([[1.0]], dtype=dtype),
+            "qLD": torch.tensor([[1.0]], dtype=dtype),
+            "qLDiagInv": torch.tensor([1.0], dtype=dtype),
+            "qfrc_constraint": torch.tensor([0.0], dtype=dtype),
+        }
+
+        for smooth_force, expected_force in ((100.0, -2.0), (-100.0, 2.0)):
+            dx = mujoco_torch.make_data(mx)
+            dx.update_(
+                **base_updates,
+                qfrc_smooth=torch.tensor([smooth_force], dtype=dtype),
+                qacc_smooth=torch.tensor([smooth_force], dtype=dtype),
+                qacc_warmstart=torch.tensor([smooth_force], dtype=dtype),
+            )
+
+            dx = solver_lib.solve(mx, dx)
+
+            np.testing.assert_allclose(dx.efc_force, [expected_force])
+            np.testing.assert_allclose(dx.qfrc_constraint, [expected_force])
+            np.testing.assert_allclose(dx.qacc, [smooth_force + expected_force])
+
     @parameterized.parameters(enumerate(("ant.xml", "frictionloss_dof.xml")))
     def test_cg(self, seed, fname):
         """Test mujoco_torch cg solver is close to mj at 32 bit precision.
