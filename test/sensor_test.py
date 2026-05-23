@@ -380,9 +380,7 @@ class SensorTest(parameterized.TestCase):
         mj_sensor = d.sensordata[: mx.nsensordata]
         mx_sensor = dx.sensordata.detach().numpy()
         np.testing.assert_allclose(mx_sensor, mj_sensor, atol=1e-3, rtol=1e-3)
-        assert np.all(np.abs(mx_sensor) > 0), (
-            f"actuator force sensors returned all zeros: {mx_sensor}"
-        )
+        assert np.all(np.abs(mx_sensor) > 0), f"actuator force sensors returned all zeros: {mx_sensor}"
 
     def test_sensor_groups_precomputed(self):
         """Pre-computed groups contain expected sensor types."""
