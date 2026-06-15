@@ -250,7 +250,6 @@ def sensor_vel(m: Model, d: Data) -> Data:
             sensor = d.subtree_angmom[objid]
             adr = (adr[:, None] + torch.arange(3, device=_dev)).reshape(-1)
         elif sensor_type in {SensorType.FRAMELINVEL, SensorType.FRAMEANGVEL}:
-            _dev = d.qpos.device
             _dtype = d.qpos.dtype
             objtype_data_vel = {
                 ObjType.UNKNOWN: (
